@@ -34,7 +34,9 @@ if __name__ == "__main__":
         image_files = [
             # "../data/mock/mock_1.png",
             # "../data/mock/mock_2.png",
-            "../data/mock/mock_3.png" # 파일 이름 확인 (이전에는 mock_3.png 였음)
+            "../data/mock/mock_3.png"  # 파일 이름 확인 (이전에는 mock_3.png 였음)
+            # 나중에 실제 데이터 추가:
+            # "../data/Training/02.라벨링데이터/fire/..."
         ]
 
         # 4. 메인 파이프라인 실행

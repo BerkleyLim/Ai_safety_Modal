@@ -1,3 +1,76 @@
+# ============================================
+# Core Dependencies
+# ============================================
+numpy==2.2.6
+python-dotenv==1.1.1
+
+# ============================================
+# Data Preprocessing (src/preprocessing/)
+# ============================================
+# 이미지 처리
+pillow==11.3.0              # 이미지 로드, 증강 (data_loader.py, data_augmentation.py)
+opencv-python==4.12.0.88    # 이미지 처리 보조 (data_loader.py)
+
+# 진행률 표시
+tqdm==4.67.1                # 전처리 진행률 표시 (pipeline.py)
+
+# ============================================
+# VLM & AI Model
+# ============================================
+openai==2.5.0               # OpenAI API (reasoning 레이어)
+torch==2.8.0                # PyTorch
+torchvision==0.23.0         # 비전 모델
+
+# Object Detection
+ultralytics==8.3.212        # YOLO (monitoring 레이어)
+ultralytics-thop==2.0.17
+
+# ============================================
+# Data Analysis & Visualization
+# ============================================
+matplotlib==3.10.7
+scipy==1.15.3
+polars==1.34.0
+polars-runtime-32==1.34.0
+
+# ============================================
+# Jupyter Notebook
+# ============================================
+jupyter==1.1.1
+jupyterlab==4.4.9
+notebook==7.4.7
+ipykernel==6.30.1
+ipython==8.37.0
+
+# Jupyter 지원 라이브러리
+jupyter_client==8.6.3
+jupyter_core==5.8.1
+jupyter_server==2.17.0
+jupyter_server_terminals==0.5.3
+jupyter-events==0.12.0
+jupyter-lsp==2.3.0
+jupyterlab_pygments==0.3.0
+jupyterlab_server==2.27.3
+notebook_shim==0.2.4
+
+# Notebook 렌더링
+nbclient==0.10.2
+nbconvert==7.16.6
+nbformat==5.10.4
+mistune==3.1.4
+pandocfilters==1.5.1
+
+# ============================================
+# Utilities
+# ============================================
+requests==2.32.5
+pydantic==2.12.3
+pydantic_core==2.41.4
+PyYAML==6.0.3
+
+# ============================================
+# Supporting Libraries
+# ============================================
 annotated-types==0.7.0
 anyio==4.11.0
 appnope==0.1.4
@@ -31,8 +104,6 @@ h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
 idna==3.10
-ipykernel==6.30.1
-ipython==8.37.0
 isoduration==20.11.0
 jedi==0.19.2
 Jinja2==3.1.6
@@ -41,63 +112,34 @@ json5==0.12.1
 jsonpointer==3.0.0
 jsonschema==4.25.1
 jsonschema-specifications==2025.9.1
-jupyter-events==0.12.0
-jupyter-lsp==2.3.0
-jupyter_client==8.6.3
-jupyter_core==5.8.1
-jupyter_server==2.17.0
-jupyter_server_terminals==0.5.3
-jupyterlab==4.4.9
-jupyterlab_pygments==0.3.0
-jupyterlab_server==2.27.3
 kiwisolver==1.4.9
 lark==1.3.0
 MarkupSafe==3.0.3
-matplotlib==3.10.7
 matplotlib-inline==0.1.7
-mistune==3.1.4
 mpmath==1.3.0
-nbclient==0.10.2
-nbconvert==7.16.6
-nbformat==5.10.4
 nest-asyncio==1.6.0
 networkx==3.4.2
-notebook==7.4.7
-notebook_shim==0.2.4
-numpy==2.2.6
-openai==2.5.0
-opencv-python==4.12.0.88
 overrides==7.7.0
 packaging==25.0
-pandocfilters==1.5.1
 parso==0.8.5
 pexpect==4.9.0
-pillow==11.3.0
 platformdirs==4.5.0
-polars==1.34.0
-polars-runtime-32==1.34.0
 prometheus_client==0.23.1
 prompt_toolkit==3.0.52
 psutil==7.1.0
 ptyprocess==0.7.0
 pure_eval==0.2.3
 pycparser==2.23
-pydantic==2.12.3
-pydantic_core==2.41.4
 Pygments==2.19.2
 pyparsing==3.2.5
 python-dateutil==2.9.0.post0
-python-dotenv==1.1.1
 python-json-logger==4.0.0
-PyYAML==6.0.3
 pyzmq==27.1.0
 referencing==0.36.2
-requests==2.32.5
 rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rfc3987-syntax==1.1.0
 rpds-py==0.27.1
-scipy==1.15.3
 Send2Trash==1.8.3
 six==1.17.0
 sniffio==1.3.1
@@ -107,16 +149,11 @@ sympy==1.14.0
 terminado==0.18.1
 tinycss2==1.4.0
 tomli==2.3.0
-torch==2.8.0
-torchvision==0.23.0
 tornado==6.5.2
-tqdm==4.67.1
 traitlets==5.14.3
 types-python-dateutil==2.9.0.20251008
 typing-inspection==0.4.2
 typing_extensions==4.15.0
-ultralytics==8.3.212
-ultralytics-thop==2.0.17
 uri-template==1.3.0
 urllib3==2.5.0
 wcwidth==0.2.14
