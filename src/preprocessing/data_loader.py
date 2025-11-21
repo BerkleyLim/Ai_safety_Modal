@@ -63,6 +63,7 @@ def load_image(image_path: str, mode: str = 'PIL') -> Optional[Image.Image]:
 def parse_annotations(json_data: Dict) -> List[Dict]:
     """
     JSON 데이터에서 어노테이션 정보를 추출합니다.
+    AI Hub 물류창고 안전 데이터셋 형식에 맞게 파싱합니다.
 
     Args:
         json_data: 로드된 JSON 데이터
@@ -71,31 +72,39 @@ def parse_annotations(json_data: Dict) -> List[Dict]:
         어노테이션 리스트 (각 객체의 bbox, class 등)
 
     Note:
-        실제 JSON 구조에 맞게 수정 필요
-        예시 구조를 기반으로 작성됨
+        JSON 구조:
+        {
+            "Learning data info.": {
+                "annotation": [
+                    {
+                        "class_id": "SO-21",
+                        "type": "box",
+                        "coord": [x, y, width, height]
+                    }
+                ]
+            }
+        }
     """
-    # TODO: 실제 데이터 다운로드 후 JSON 구조에 맞게 수정
-    # 현재는 일반적인 COCO 스타일 가정
-
     annotations = []
 
-    # 예시 1: COCO 형식
-    if 'annotations' in json_data:
-        for ann in json_data['annotations']:
-            annotations.append({
-                'category': ann.get('category', 'unknown'),
-                'category_id': ann.get('category_id', -1),
-                'bbox': ann.get('bbox', [0, 0, 0, 0]),  # [x, y, width, height]
-                'attributes': ann.get('attributes', {})
-            })
+    # AI Hub 형식: Learning data info. -> annotation
+    learning_info = json_data.get('Learning data info.', {})
+    annotation_list = learning_info.get('annotation', [])
 
-    # 예시 2: Custom 형식 (AI Hub 스타일)
-    elif 'objects' in json_data:
-        for obj in json_data['objects']:
+    for ann in annotation_list:
+        # class_id와 coord 추출
+        class_id = ann.get('class_id', 'unknown')
+        bbox_type = ann.get('type', 'box')
+        coord = ann.get('coord', [0, 0, 0, 0])
+
+        # bbox가 유효한 경우만 추가
+        if len(coord) == 4:
             annotations.append({
-                'category': obj.get('class', 'unknown'),
-                'bbox': obj.get('bbox', [0, 0, 0, 0]),
-                'attributes': obj.get('attributes', {})
+                'category': class_id,
+                'category_id': class_id,
+                'bbox': coord,  # [x, y, width, height]
+                'type': bbox_type,
+                'attributes': {}
             })
 
     return annotations
@@ -104,25 +113,45 @@ def parse_annotations(json_data: Dict) -> List[Dict]:
 def get_image_info(json_data: Dict) -> Dict:
     """
     JSON 데이터에서 이미지 정보를 추출합니다.
+    AI Hub 물류창고 안전 데이터셋 형식에 맞게 파싱합니다.
 
     Args:
         json_data: 로드된 JSON 데이터
 
     Returns:
         이미지 정보 (파일명, 크기 등)
-    """
-    # TODO: 실제 JSON 구조에 맞게 수정
 
-    if 'image' in json_data:
-        return json_data['image']
-    elif 'images' in json_data:
-        return json_data['images']
-    else:
-        return {
-            'file_name': json_data.get('file_name', 'unknown.jpg'),
-            'width': json_data.get('width', 0),
-            'height': json_data.get('height', 0)
+    Note:
+        JSON 구조:
+        {
+            "Source data Info.": {
+                "source_data_ID": "L-211227_G19_I_UC-11_008_0144",
+                "file_extension": "jpg"
+            },
+            "Raw data Info.": {
+                "resolution": [1920, 1080]
+            }
         }
+    """
+    # Source data Info에서 파일명 정보 추출
+    source_info = json_data.get('Source data Info.', {})
+    source_id = source_info.get('source_data_ID', 'unknown')
+    file_ext = source_info.get('file_extension', 'jpg')
+
+    # Raw data Info에서 해상도 정보 추출
+    raw_info = json_data.get('Raw data Info.', {})
+    resolution = raw_info.get('resolution', [0, 0])
+
+    # 파일명 생성
+    file_name = f"{source_id}.{file_ext}"
+
+    return {
+        'file_name': file_name,
+        'width': resolution[0] if len(resolution) >= 1 else 0,
+        'height': resolution[1] if len(resolution) >= 2 else 0,
+        'source_data_ID': source_id,
+        'file_extension': file_ext
+    }
 
 
 def scan_dataset(data_dir: str, ext: str = '.json') -> List[str]:

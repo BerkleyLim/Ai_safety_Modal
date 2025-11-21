@@ -21,6 +21,22 @@ def main_pipeline(image_path):
 
 if __name__ == "__main__":
 
+    # ========================================
+    # 전처리 테스트 (원하는 것만 주석 해제)
+    # ========================================
+
+    # 1) 데이터 로더 테스트 (JSON + 이미지 매칭 확인)
+    # from preprocessing.test_data_loader import test_single_json_and_image
+    # test_single_json_and_image()
+
+    # 2) 작은 샘플 전처리 테스트 (5개 데이터로 전처리 파이프라인 확인)
+    from preprocessing.test_pipeline_small import test_small_sample
+    test_small_sample()
+
+    # ========================================
+    # 메인 파이프라인
+    # ========================================
+
     # 2. API 키가 로드되었는지 확인 (선택 사항이지만 안전)
     if not os.environ.get("OPENAI_API_KEY"):
         print("🚨 오류: OPENAI_API_KEY가 .env 파일에 없거나 로드되지 않았습니다.")
