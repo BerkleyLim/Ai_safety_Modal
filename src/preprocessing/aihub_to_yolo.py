@@ -44,62 +44,139 @@ from tqdm import tqdm
 import yaml
 
 
-# 클래스 매핑 정의 (class_id -> 정수 인덱스)
+# 클래스 매핑 정의 (class_id -> 정수 인덱스) - 57개 클래스
+# AI Hub 물류센터 안전장비 및 행동 인식 데이터 공식 정의 기준
 CLASS_MAPPING = {
-    # Safety Object (SO) - 안전 관련 객체
-    "SO-01": 0,   # 안전모
-    "SO-02": 1,   # 안전화
-    "SO-03": 2,   # 안전조끼
-    "SO-06": 3,   # 바닥
-    "SO-07": 4,   # 안전표지판
-    "SO-08": 5,   # 소화기
-    "SO-12": 6,   # 안전난간
-    "SO-13": 7,   # 안전벨트
-    "SO-14": 8,   # 안전구역 (polygon)
-    "SO-15": 9,   # 안전구역
-    "SO-16": 10,  # 비상구
-    "SO-17": 11,  # 안전망
-    "SO-18": 12,  # 안전펜스
-    "SO-19": 13,  # 샌드위치패널
-    "SO-21": 14,  # 안전라인
-    "SO-22": 15,  # 안전문
-    "SO-23": 16,  # 안전장갑
+    # Static Object (SO) - 정적 객체 (21개)
+    "SO-01": 0,   # 보관랙(선반)
+    "SO-02": 1,   # 적재물류(그룹)
+    "SO-03": 2,   # 물류(개별)
+    "SO-05": 3,   # (미사용, 데이터 1건)
+    "SO-06": 4,   # 도크
+    "SO-07": 5,   # 출입문
+    "SO-08": 6,   # 화물승강기
+    "SO-09": 7,   # 차단멀티탭
+    "SO-10": 8,   # 멀티탭
+    "SO-11": 9,   # 개인 전열기구
+    "SO-12": 10,  # 소화기
+    "SO-13": 11,  # 작업 안전구역
+    "SO-14": 12,  # 용접 작업 구역
+    "SO-15": 13,  # 지게차 이동영역
+    "SO-16": 14,  # 출입제한 구역
+    "SO-17": 15,  # 화재 대피로
+    "SO-18": 16,  # 안전펜스
+    "SO-19": 17,  # 화기(용접기,토치)
+    "SO-21": 18,  # 이물질(물,기름)
+    "SO-22": 19,  # 가연물,인화물(목재,섬유,석유통)
+    "SO-23": 20,  # 샌드위치판넬
 
-    # Work Object (WO) - 작업 관련 객체
-    "WO-01": 17,  # 사람
-    "WO-02": 18,  # 지게차
-    "WO-03": 19,  # 파렛트
-    "WO-04": 20,  # 렉/선반
-    "WO-05": 21,  # 박스/화물
-    "WO-06": 22,  # 컨베이어
-    "WO-07": 23,  # 핸드카트
+    # Work Object (WO) - 동적 객체 (8개)
+    "WO-01": 21,  # 작업자(작업복 착용)
+    "WO-02": 22,  # 작업자(작업복 미착용)
+    "WO-03": 23,  # 화물트럭
+    "WO-04": 24,  # 지게차
+    "WO-05": 25,  # 핸드파레트카
+    "WO-06": 26,  # 롤테이너
+    "WO-07": 27,  # 운반수레
+    "WO-08": 28,  # 흡연
 
-    # Unsafe Action (UA) - 불안전한 행동
-    "UA-01": 24,  # 안전모 미착용
-    "UA-02": 25,  # 안전화 미착용
-    "UA-03": 26,  # 안전조끼 미착용
-    "UA-04": 27,  # 위험구역 진입
-    "UA-05": 28,  # 운전 중 핸드폰 사용
-    "UA-06": 29,  # 과속
-    "UA-16": 30,  # 기타 불안전 행동
+    # Unsafe Action (UA) - 위험 행동 (13개)
+    "UA-01": 29,  # 지게차 화물운반 시 운전자 시야 미확보
+    "UA-02": 30,  # 지게차 적재 시 주변 장애물 존재
+    "UA-03": 31,  # 3단 이상 화물 평치 적재
+    "UA-04": 32,  # 랙 보관 화물 적재상태 불량
+    "UA-05": 33,  # 운반장비 화물 불안정 적재
+    "UA-06": 34,  # 화물 운반 중 붕괴
+    "UA-10": 35,  # 지게차 이동통로에 사람 존재
+    "UA-12": 36,  # 지게차 안전수칙 미준수
+    "UA-13": 37,  # 지게차 화물 적재불량/붕괴
+    "UA-14": 38,  # 지게차 작업구역 내 작업자 존재
+    "UA-16": 39,  # 핸드파레트카 2단 이상 적재
+    "UA-17": 40,  # 용접구역 내 가연물/인화물 침범
+    "UA-20": 41,  # 비흡연구역 흡연
 
-    # Unsafe Condition (UC) - 불안전한 상태
-    "UC-09": 31,  # 통로 장애물
-    "UC-10": 32,  # 적재 불량
-    "UC-15": 33,  # 조명 불량
-    "UC-16": 34,  # 기타 불안전 상태
+    # Unsafe Condition (UC) - 위험 상태 (15개)
+    "UC-02": 42,  # 입고 시 화물트럭 내 작업자 존재
+    "UC-06": 43,  # 출고 시 화물트럭 내 작업자 존재
+    "UC-08": 44,  # 지게차 이동통로 미표시
+    "UC-09": 45,  # 도크 출입문 앞 장애물
+    "UC-10": 46,  # 도크 접차 시 후방에 사람 존재
+    "UC-13": 47,  # 빈 파렛트 미정돈
+    "UC-14": 48,  # 랙 안전선 내 작업자 기대기
+    "UC-15": 49,  # 파렛트 비틀림/파손/부식
+    "UC-16": 50,  # 화물승강기 작업자 탑승
+    "UC-17": 51,  # 과부하차단 없는 멀티탭 사용
+    "UC-18": 52,  # 소화기 미비치
+    "UC-19": 53,  # 출입제한구역 출입문 열림
+    "UC-20": 54,  # 화재대피로 내 적재물
+    "UC-21": 55,  # 도크-화물트럭 분리됨
+    "UC-22": 56,  # 지게차 이동영역 이탈 주행
 }
 
-# 클래스 이름 (YOLO data.yaml에 사용)
+# 클래스 이름 (YOLO data.yaml에 사용) - 57개
+# AI Hub 공식 정의 기준 영문 변환
 CLASS_NAMES = [
-    "safety_helmet", "safety_shoes", "safety_vest", "floor", "safety_sign",
-    "fire_extinguisher", "safety_railing", "safety_belt", "safety_zone_polygon",
-    "safety_zone", "emergency_exit", "safety_net", "safety_fence", "sandwich_panel",
-    "safety_line", "safety_door", "safety_gloves",
-    "person", "forklift", "pallet", "rack", "cargo", "conveyor", "handcart",
-    "no_helmet", "no_safety_shoes", "no_safety_vest", "danger_zone_entry",
-    "phone_while_driving", "speeding", "other_unsafe_action",
-    "pathway_obstacle", "improper_stacking", "poor_lighting", "other_unsafe_condition"
+    # SO (Static Object) - 정적 객체 21개
+    "storage_rack",              # SO-01: 보관랙(선반)
+    "stacked_cargo_group",       # SO-02: 적재물류(그룹)
+    "cargo_individual",          # SO-03: 물류(개별)
+    "unused_so05",               # SO-05: (미사용)
+    "dock",                      # SO-06: 도크
+    "entrance_door",             # SO-07: 출입문
+    "cargo_elevator",            # SO-08: 화물승강기
+    "surge_protector_powerstrip",# SO-09: 차단멀티탭
+    "powerstrip",                # SO-10: 멀티탭
+    "personal_heater",           # SO-11: 개인 전열기구
+    "fire_extinguisher",         # SO-12: 소화기
+    "work_safety_zone",          # SO-13: 작업 안전구역
+    "welding_zone",              # SO-14: 용접 작업 구역
+    "forklift_path",             # SO-15: 지게차 이동영역
+    "restricted_zone",           # SO-16: 출입제한 구역
+    "fire_escape_route",         # SO-17: 화재 대피로
+    "safety_fence",              # SO-18: 안전펜스
+    "welding_torch",             # SO-19: 화기(용접기,토치)
+    "floor_contaminant",         # SO-21: 이물질(물,기름)
+    "flammable_material",        # SO-22: 가연물,인화물
+    "sandwich_panel",            # SO-23: 샌드위치판넬
+    # WO (Work Object) - 동적 객체 8개
+    "worker_uniform",            # WO-01: 작업자(작업복 착용)
+    "worker_no_uniform",         # WO-02: 작업자(작업복 미착용)
+    "cargo_truck",               # WO-03: 화물트럭
+    "forklift",                  # WO-04: 지게차
+    "hand_pallet_truck",         # WO-05: 핸드파레트카
+    "roll_container",            # WO-06: 롤테이너
+    "handcart",                  # WO-07: 운반수레
+    "smoking",                   # WO-08: 흡연
+    # UA (Unsafe Action) - 위험 행동 13개
+    "forklift_blind_spot",       # UA-01: 지게차 시야 미확보
+    "forklift_obstacle_nearby",  # UA-02: 지게차 적재 시 장애물
+    "stacking_3_levels_flat",    # UA-03: 3단 이상 평치 적재
+    "rack_improper_stacking",    # UA-04: 랙 적재상태 불량
+    "unstable_cargo_loading",    # UA-05: 운반장비 불안정 적재
+    "cargo_collapse",            # UA-06: 화물 붕괴
+    "person_in_forklift_path",   # UA-10: 지게차 통로에 사람
+    "forklift_safety_violation", # UA-12: 지게차 안전수칙 미준수
+    "forklift_cargo_collapse",   # UA-13: 지게차 화물 붕괴
+    "worker_in_forklift_zone",   # UA-14: 지게차 구역 내 작업자
+    "pallet_truck_over_stacking",# UA-16: 핸드파레트카 과적재
+    "flammable_in_welding_zone", # UA-17: 용접구역 가연물 침범
+    "smoking_in_no_smoke_zone",  # UA-20: 비흡연구역 흡연
+    # UC (Unsafe Condition) - 위험 상태 15개
+    "worker_in_truck_loading",   # UC-02: 입고 시 트럭 내 작업자
+    "worker_in_truck_unloading", # UC-06: 출고 시 트럭 내 작업자
+    "forklift_path_unmarked",    # UC-08: 지게차 통로 미표시
+    "dock_door_obstacle",        # UC-09: 도크 출입문 장애물
+    "person_behind_docking",     # UC-10: 도크 접차 시 후방 사람
+    "pallet_disorganized",       # UC-13: 빈 파렛트 미정돈
+    "worker_leaning_on_rack",    # UC-14: 랙에 기대는 작업자
+    "pallet_damaged",            # UC-15: 파렛트 파손
+    "worker_in_elevator",        # UC-16: 화물승강기 탑승
+    "no_surge_protector",        # UC-17: 과부하차단 없는 멀티탭
+    "no_fire_extinguisher",      # UC-18: 소화기 미비치
+    "restricted_door_open",      # UC-19: 출입제한구역 문 열림
+    "cargo_in_fire_escape",      # UC-20: 화재대피로 적재물
+    "truck_dock_separated",      # UC-21: 도크-트럭 분리
+    "forklift_outside_path",     # UC-22: 지게차 영역 이탈
 ]
 
 # 카테고리 이름 매핑 (01~11)

@@ -37,11 +37,39 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model.to(device)
 print(f"🤖 [Monitoring] YOLOv8 모델을 '{device}' 장치에서 실행합니다.")
 
-# 위험 클래스 정의 (커스텀 모델용)
+# 위험 클래스 정의 (커스텀 모델용) - 57개 클래스 중 UA/UC 클래스
+# AI Hub 공식 정의 기준
 ANOMALY_CLASSES = [
-    "no_helmet", "no_safety_shoes", "no_safety_vest", "danger_zone_entry",
-    "phone_while_driving", "speeding", "other_unsafe_action",
-    "pathway_obstacle", "improper_stacking", "poor_lighting", "other_unsafe_condition"
+    # Unsafe Action (UA) - 위험 행동 13개
+    "forklift_blind_spot",       # UA-01: 지게차 시야 미확보
+    "forklift_obstacle_nearby",  # UA-02: 지게차 적재 시 장애물
+    "stacking_3_levels_flat",    # UA-03: 3단 이상 평치 적재
+    "rack_improper_stacking",    # UA-04: 랙 적재상태 불량
+    "unstable_cargo_loading",    # UA-05: 운반장비 불안정 적재
+    "cargo_collapse",            # UA-06: 화물 붕괴
+    "person_in_forklift_path",   # UA-10: 지게차 통로에 사람
+    "forklift_safety_violation", # UA-12: 지게차 안전수칙 미준수
+    "forklift_cargo_collapse",   # UA-13: 지게차 화물 붕괴
+    "worker_in_forklift_zone",   # UA-14: 지게차 구역 내 작업자
+    "pallet_truck_over_stacking",# UA-16: 핸드파레트카 과적재
+    "flammable_in_welding_zone", # UA-17: 용접구역 가연물 침범
+    "smoking_in_no_smoke_zone",  # UA-20: 비흡연구역 흡연
+    # Unsafe Condition (UC) - 위험 상태 15개
+    "worker_in_truck_loading",   # UC-02: 입고 시 트럭 내 작업자
+    "worker_in_truck_unloading", # UC-06: 출고 시 트럭 내 작업자
+    "forklift_path_unmarked",    # UC-08: 지게차 통로 미표시
+    "dock_door_obstacle",        # UC-09: 도크 출입문 장애물
+    "person_behind_docking",     # UC-10: 도크 접차 시 후방 사람
+    "pallet_disorganized",       # UC-13: 빈 파렛트 미정돈
+    "worker_leaning_on_rack",    # UC-14: 랙에 기대는 작업자
+    "pallet_damaged",            # UC-15: 파렛트 파손
+    "worker_in_elevator",        # UC-16: 화물승강기 탑승
+    "no_surge_protector",        # UC-17: 과부하차단 없는 멀티탭
+    "no_fire_extinguisher",      # UC-18: 소화기 미비치
+    "restricted_door_open",      # UC-19: 출입제한구역 문 열림
+    "cargo_in_fire_escape",      # UC-20: 화재대피로 적재물
+    "truck_dock_separated",      # UC-21: 도크-트럭 분리
+    "forklift_outside_path",     # UC-22: 지게차 영역 이탈
 ]
 
 

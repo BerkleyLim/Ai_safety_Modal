@@ -149,9 +149,9 @@ cd src
 python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05 06 07 08 09 10 11 --sample 500
 ```
 
-## 클래스 (35개)
+## 클래스 (57개)
 
-- **안전 객체 (SO)**: safety_helmet, safety_shoes, safety_vest, floor, safety_sign 등
-- **작업 객체 (WO)**: person, forklift, pallet, rack, cargo, conveyor, handcart
-- **위험 행동 (UA)**: no_helmet, no_safety_shoes, no_safety_vest, danger_zone_entry 등
-- **위험 상태 (UC)**: pathway_obstacle, improper_stacking, poor_lighting 등
+- **정적 객체 (SO) 21개**: 보관랙, 적재물류, 도크, 출입문, 화물승강기, 멀티탭, 소화기, 안전구역, 지게차이동영역, 안전펜스 등
+- **동적 객체 (WO) 8개**: 작업자(작업복착용/미착용), 화물트럭, 지게차, 핸드파레트카, 롤테이너, 운반수레, 흡연
+- **위험 행동 (UA) 13개**: 지게차 시야미확보, 화물 붕괴, 평치적재, 적재불량, 지게차 통로 내 사람, 용접구역 가연물 등
+- **위험 상태 (UC) 15개**: 트럭 내 작업자, 지게차 통로 미표시, 도크 장애물, 파렛트 파손, 소화기 미비치, 대피로 적재물 등
