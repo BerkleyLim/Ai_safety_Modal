@@ -1,352 +1,255 @@
 # 데이터 전처리 모듈
 
-물류창고 안전 데이터셋(AI Hub)의 JSON 라벨링 데이터와 이미지를 전처리하는 모듈입니다.
+AI Hub 물류창고 안전 데이터셋을 YOLO 형식으로 변환하는 모듈입니다.
 
-## 📁 파일 구조
+## 파일 구조
 
 ```
 preprocessing/
-├── README.md                   # 이 문서
-├── __init__.py                 # 모듈 초기화 및 주요 함수 export
-├── data_loader.py              # 데이터 로딩 (JSON, 이미지)
-├── data_validator.py           # 데이터 유효성 검증
-├── data_augmentation.py        # 데이터 증강 (회전, 반전, 밝기 등)
-├── pipeline.py                 # 전체 전처리 파이프라인 통합
-└── example_usage.py            # 사용 예시 및 실행 스크립트
+├── README.md           # 이 문서
+├── __init__.py         # 모듈 초기화
+└── aihub_to_yolo.py    # AI Hub -> YOLO 변환 스크립트
 ```
 
 ---
 
-## 📄 각 파일 설명
+## 빠른 시작
 
-### 1. `__init__.py`
-**역할**: 모듈 초기화 및 주요 함수 export
+### 1. 명령줄에서 전처리 실행
 
-**내용**:
-- 주요 함수들을 모듈 레벨에서 import 가능하게 설정
-- `load_json_labels`, `load_image`, `validate_dataset`, `augment_image`, `preprocess_pipeline` export
-
-**사용 예시**:
-```python
-from preprocessing import load_json_labels, preprocess_pipeline
-```
-
----
-
-### 2. `data_loader.py`
-**역할**: JSON 라벨 파일과 이미지 파일을 로드하는 유틸리티
-
-**주요 함수**:
-- `load_json_labels(json_path)`: JSON 라벨 파일 로드
-- `load_image(image_path, mode='PIL')`: 이미지 로드 (PIL 또는 cv2)
-- `parse_annotations(json_data)`: JSON에서 어노테이션(bbox, class) 추출
-- `get_image_info(json_data)`: JSON에서 이미지 메타정보 추출
-- `scan_dataset(data_dir, ext='.json')`: 디렉토리에서 모든 JSON 파일 스캔
-
-**특징**:
-- AI Hub 데이터셋의 JSON 구조에 맞게 파싱
-- COCO 형식 및 Custom 형식 지원
-- PIL/OpenCV 양쪽 이미지 로딩 지원
-
-**사용 예시**:
-```python
-from preprocessing.data_loader import load_json_labels, load_image
-
-json_data = load_json_labels("path/to/label.json")
-image = load_image("path/to/image.jpg", mode='PIL')
-annotations = parse_annotations(json_data)
-```
-
----
-
-### 3. `data_validator.py`
-**역할**: 데이터의 무결성 및 유효성을 검증
-
-**주요 클래스/함수**:
-- `DataValidator`: 데이터 검증 클래스
-  - `validate_image(image_path)`: 이미지 파일 존재, 손상 여부, 크기 확인
-  - `validate_bbox(bbox, width, height)`: bbox가 이미지 범위 내에 있는지, 최소 크기 충족하는지 확인
-  - `validate_annotation(annotation, width, height)`: 어노테이션 필수 필드 및 bbox 검증
-  - `validate_dataset(json_data_list, image_dir)`: 전체 데이터셋 일괄 검증
-  - `print_summary()`: 검증 결과 요약 출력
-
-**특징**:
-- 최소 bbox 크기 설정 가능 (기본 10픽셀)
-- 에러(errors)와 경고(warnings) 구분
-- 이미지 손상 감지 (`PIL.Image.verify()`)
-- bbox가 이미지 범위를 벗어나는지 확인
-
-**사용 예시**:
-```python
-from preprocessing.data_validator import DataValidator
-
-validator = DataValidator(min_bbox_size=10)
-is_valid = validator.validate_image("path/to/image.jpg")
-is_bbox_valid = validator.validate_bbox([100, 100, 200, 150], 1920, 1080)
-validator.print_summary()
-```
-
----
-
-### 4. `data_augmentation.py`
-**역할**: 이미지와 bbox를 함께 증강하여 학습 데이터 확장
-
-**주요 클래스/함수**:
-- `ImageAugmenter`: 데이터 증강 클래스
-  - `rotate_image_and_bbox()`: 이미지와 bbox를 함께 회전
-  - `flip_image_and_bbox()`: 좌우/상하 반전
-  - `adjust_brightness()`: 밝기 조절
-  - `adjust_contrast()`: 대비 조절
-  - `add_blur()`: 가우시안 블러 추가
-  - `augment()`: 위 기법들을 랜덤 또는 전체 적용
-
-**증강 기법**:
-1. **회전 (Rotation)**: ±15도 범위 내 랜덤 회전
-2. **좌우 반전 (Horizontal Flip)**: 50% 확률
-3. **상하 반전 (Vertical Flip)**: 옵션 (기본 비활성화)
-4. **밝기 조절 (Brightness)**: 0.8~1.2배 범위
-5. **대비 조절 (Contrast)**: 0.8~1.2배 범위
-6. **블러 (Blur)**: 10% 확률로 가우시안 블러
-
-**특징**:
-- bbox 좌표도 함께 변환 (기하학적 변환)
-- 회전 시 bbox의 4개 코너를 모두 회전시킨 후 새 bbox 계산
-- 이미지 범위를 벗어나는 bbox는 자동 제거
-- 원본 이미지도 결과에 포함
-
-**사용 예시**:
-```python
-from preprocessing.data_augmentation import ImageAugmenter
-
-augmenter = ImageAugmenter()
-bboxes = [[100, 100, 200, 150]]
-augmented = augmenter.augment(image, bboxes, augment_all=False)
-
-for aug_img, aug_bboxes, method in augmented:
-    print(f"Method: {method}, Objects: {len(aug_bboxes)}")
-```
-
----
-
-### 5. `pipeline.py`
-**역할**: 전체 전처리 과정을 통합 관리
-
-**주요 클래스/함수**:
-- `PreprocessingPipeline`: 전처리 파이프라인 클래스
-  - `__init__()`: 입출력 경로, 증강 옵션, 분할 비율 설정
-  - `split_dataset()`: train/val/test 분할 (70%/15%/15% 기본)
-  - `process_single_data()`: 단일 데이터 처리 (로드 → 검증 → 증강 → 저장)
-  - `run()`: 전체 파이프라인 실행
-
-**파이프라인 단계**:
-1. **스캔**: 입력 디렉토리에서 JSON 파일 스캔
-2. **분할**: train/val/test로 랜덤 분할
-3. **처리**: 각 데이터에 대해
-   - JSON 로드
-   - 이미지 로드 및 검증
-   - bbox 검증
-   - 데이터 증강 (train만)
-   - 저장 (images/, labels/)
-4. **검증 결과 출력**: 성공/실패 통계
-
-**출력 구조**:
-```
-output_dir/
-├── train/
-│   ├── images/
-│   │   ├── train_000000_0.jpg  # 원본
-│   │   ├── train_000000_1.jpg  # 증강1
-│   │   └── ...
-│   └── labels/
-│       ├── train_000000_0.json
-│       ├── train_000000_1.json
-│       └── ...
-├── val/
-│   ├── images/
-│   └── labels/
-└── test/
-    ├── images/
-    └── labels/
-```
-
-**사용 예시**:
-```python
-from preprocessing import preprocess_pipeline
-
-preprocess_pipeline(
-    input_dir='data/raw',
-    output_dir='data/processed',
-    apply_augmentation=True,
-    train_ratio=0.7,
-    val_ratio=0.15,
-    test_ratio=0.15,
-    min_bbox_size=10
-)
-```
-
----
-
-### 6. `example_usage.py`
-**역할**: 전처리 파이프라인 실행 스크립트 및 사용 예시
-
-**주요 함수**:
-- `main()`: 전체 전처리 파이프라인 실행
-- `test_single_file()`: 단일 파일 테스트용 함수
-
-**실행 모드**:
-1. **full**: 전체 데이터셋 전처리
-2. **test**: 단일 파일 테스트
-
-**실행 방법**:
 ```bash
-# 전체 전처리 실행
-python example_usage.py --mode full
+# 프로젝트 루트에서 실행
+cd /path/to/VLM_SafetyGudiance
 
-# 단일 파일 테스트
-python example_usage.py --mode test
+# 전체 카테고리 변환 (01~11)
+python -m src.preprocessing.aihub_to_yolo \
+    --data-root ./data/ai_hub \
+    --output ./data
+
+# 특정 카테고리만 변환 (01, 02, 03)
+python -m src.preprocessing.aihub_to_yolo \
+    --data-root ./data/ai_hub \
+    --output ./data \
+    --folders 01 02 03
+
+# 샘플링 모드 (카테고리당 100개만 처리)
+python -m src.preprocessing.aihub_to_yolo \
+    --data-root ./data/ai_hub \
+    --output ./data \
+    --sample 100
 ```
 
-**설정 항목**:
-- `INPUT_DIR`: 원본 데이터 경로
-- `OUTPUT_DIR`: 전처리 결과 저장 경로
-- `APPLY_AUGMENTATION`: 데이터 증강 적용 여부
-- `TRAIN_RATIO`, `VAL_RATIO`, `TEST_RATIO`: 데이터 분할 비율
-- `MIN_BBOX_SIZE`: 최소 bbox 크기 (픽셀)
+### 2. Python 코드에서 실행
+
+```python
+from src.preprocessing import AIHubToYOLOConverter
+
+# 전체 카테고리 변환
+converter = AIHubToYOLOConverter(
+    data_root='./data/ai_hub',
+    output_base='./data',
+    target_folders=None,  # None이면 01~11 전체
+    sample_size=None      # None이면 전체 처리
+)
+converter.run()
+
+# 특정 카테고리만 변환
+converter = AIHubToYOLOConverter(
+    data_root='./data/ai_hub',
+    output_base='./data',
+    target_folders=['01', '02', '03'],
+    sample_size=100  # 카테고리당 100개만
+)
+converter.run()
+```
 
 ---
 
-## 🚀 빠른 시작
+## 입력 데이터 구조 (AI Hub)
 
-### 1. 전체 전처리 실행
+```
+data/ai_hub/
+├── traning/
+│   ├── original/
+│   │   ├── TS_01_도크설비/
+│   │   │   ├── 불안전한 상태(UC)/
+│   │   │   │   └── *.jpg
+│   │   │   └── 작업상황(WS)/
+│   │   │       └── *.jpg
+│   │   ├── TS_02_보관/
+│   │   └── ...
+│   └── label/
+│       ├── TL_01_도크설비/
+│       │   ├── 불안전한 상태(UC)/
+│       │   │   └── *.json
+│       │   └── 작업상황(WS)/
+│       │       └── *.json
+│       ├── TL_02_보관/
+│       └── ...
+└── validation/
+    ├── original/
+    │   └── VS_01_도크설비/
+    └── label/
+        └── VL_01_도크설비/
+```
+
+---
+
+## 출력 데이터 구조 (YOLO 형식)
+
+```
+data/
+├── 01_도크설비/
+│   └── logistics_yolo/
+│       ├── data.yaml           # YOLO 학습 설정 파일
+│       ├── train/
+│       │   ├── images/         # 학습 이미지
+│       │   │   ├── image_000000.jpg
+│       │   │   └── ...
+│       │   └── labels/         # 학습 라벨 (YOLO txt 형식)
+│       │       ├── image_000000.txt
+│       │       └── ...
+│       └── val/
+│           ├── images/         # 검증 이미지
+│           └── labels/         # 검증 라벨
+├── 02_보관/
+│   └── logistics_yolo/
+│       └── ...
+├── 03_부가가치서비스/
+├── 04_설비및장비/
+├── 05_운반/
+├── 06_입고/
+├── 07_지게차/
+├── 08_출고/
+├── 09_파렛트렉/
+├── 10_피킹분배/
+└── 11_화재/
+```
+
+---
+
+## YOLO 라벨 형식
+
+각 `.txt` 파일은 다음 형식입니다:
+
+```
+<class_id> <x_center> <y_center> <width> <height>
+```
+
+- `class_id`: 클래스 인덱스 (0~34)
+- `x_center`, `y_center`: 중심점 좌표 (0~1 정규화)
+- `width`, `height`: 너비/높이 (0~1 정규화)
+
+예시:
+```
+17 0.523438 0.456481 0.119010 0.393519
+12 0.650521 0.487037 0.355244 0.239259
+```
+
+---
+
+## 클래스 목록 (35개)
+
+| ID | Class ID | 클래스명 (영문) | 설명 |
+|----|----------|-----------------|------|
+| 0 | SO-01 | safety_helmet | 안전모 |
+| 1 | SO-02 | safety_shoes | 안전화 |
+| 2 | SO-03 | safety_vest | 안전조끼 |
+| 3 | SO-06 | floor | 바닥 |
+| 4 | SO-07 | safety_sign | 안전표지판 |
+| 5 | SO-08 | fire_extinguisher | 소화기 |
+| 6 | SO-12 | safety_railing | 안전난간 |
+| 7 | SO-13 | safety_belt | 안전벨트 |
+| 8 | SO-14 | safety_zone_polygon | 안전구역 (polygon) |
+| 9 | SO-15 | safety_zone | 안전구역 |
+| 10 | SO-16 | emergency_exit | 비상구 |
+| 11 | SO-17 | safety_net | 안전망 |
+| 12 | SO-18 | safety_fence | 안전펜스 |
+| 13 | SO-19 | sandwich_panel | 샌드위치패널 |
+| 14 | SO-21 | safety_line | 안전라인 |
+| 15 | SO-22 | safety_door | 안전문 |
+| 16 | SO-23 | safety_gloves | 안전장갑 |
+| 17 | WO-01 | person | 사람 |
+| 18 | WO-02 | forklift | 지게차 |
+| 19 | WO-03 | pallet | 파렛트 |
+| 20 | WO-04 | rack | 렉/선반 |
+| 21 | WO-05 | cargo | 박스/화물 |
+| 22 | WO-06 | conveyor | 컨베이어 |
+| 23 | WO-07 | handcart | 핸드카트 |
+| 24 | UA-01 | no_helmet | 안전모 미착용 |
+| 25 | UA-02 | no_safety_shoes | 안전화 미착용 |
+| 26 | UA-03 | no_safety_vest | 안전조끼 미착용 |
+| 27 | UA-04 | danger_zone_entry | 위험구역 진입 |
+| 28 | UA-05 | phone_while_driving | 운전 중 핸드폰 |
+| 29 | UA-06 | speeding | 과속 |
+| 30 | UA-16 | other_unsafe_action | 기타 불안전 행동 |
+| 31 | UC-09 | pathway_obstacle | 통로 장애물 |
+| 32 | UC-10 | improper_stacking | 적재 불량 |
+| 33 | UC-15 | poor_lighting | 조명 불량 |
+| 34 | UC-16 | other_unsafe_condition | 기타 불안전 상태 |
+
+---
+
+## data.yaml 예시
+
+```yaml
+path: /absolute/path/to/01_도크설비/logistics_yolo
+train: train/images
+val: val/images
+nc: 35
+names:
+  - safety_helmet
+  - safety_shoes
+  - safety_vest
+  - floor
+  - safety_sign
+  # ... (35개 클래스)
+```
+
+---
+
+## YOLO 학습 방법
+
+전처리 완료 후 YOLO 학습:
 
 ```python
-from preprocessing import preprocess_pipeline
+from ultralytics import YOLO
 
-preprocess_pipeline(
-    input_dir='../data/raw',
-    output_dir='../data/processed',
-    apply_augmentation=True,
-    train_ratio=0.7,
-    val_ratio=0.15,
-    test_ratio=0.15
+# 모델 로드
+model = YOLO('yolov8n.pt')  # 또는 yolov8s.pt, yolov8m.pt
+
+# 학습 실행
+model.train(
+    data='./data/01_도크설비/logistics_yolo/data.yaml',
+    epochs=100,
+    imgsz=640,
+    batch=16,
+    device=0  # GPU 사용
 )
 ```
 
-### 2. 단일 파일 테스트
+---
 
-```python
-from preprocessing.data_loader import load_json_labels, load_image
-from preprocessing.data_validator import DataValidator
-from preprocessing.data_augmentation import ImageAugmenter
+## 주의사항
 
-# JSON 로드
-json_data = load_json_labels("path/to/label.json")
-
-# 이미지 로드
-image = load_image("path/to/image.jpg", mode='PIL')
-
-# 검증
-validator = DataValidator(min_bbox_size=10)
-is_valid = validator.validate_image("path/to/image.jpg")
-
-# 증강
-augmenter = ImageAugmenter()
-augmented = augmenter.augment(image, bboxes)
-```
+1. **디스크 공간**: 전체 변환 시 원본의 약 2배 용량 필요
+2. **처리 시간**: 전체 데이터셋 변환에 수십 분~수 시간 소요
+3. **이미지 매칭**: label 폴더와 original 폴더의 구조가 일치해야 함
+   - `TL_01_xxx` ↔ `TS_01_xxx`
+   - `VL_01_xxx` ↔ `VS_01_xxx`
 
 ---
 
-## 🔧 커스터마이징
+## 문제 해결
 
-### 증강 옵션 변경
+### 이미지를 찾을 수 없음
+- original 폴더에 해당 이미지가 있는지 확인
+- 폴더 이름 매칭 확인 (TL↔TS, VL↔VS)
 
-```python
-from preprocessing.data_augmentation import ImageAugmenter
+### 클래스가 인식되지 않음
+- JSON의 `class_id`가 `CLASS_MAPPING`에 정의되어 있는지 확인
+- 새로운 클래스는 `aihub_to_yolo.py`의 `CLASS_MAPPING`에 추가
 
-augmenter = ImageAugmenter(
-    rotation_range=30,              # 회전 각도 증가
-    brightness_range=(0.7, 1.3),    # 밝기 범위 확대
-    flip_vertical=True,             # 상하 반전 활성화
-    blur_probability=0.2            # 블러 확률 증가
-)
-```
-
-### 데이터 분할 비율 변경
-
-```python
-preprocess_pipeline(
-    input_dir='data/raw',
-    output_dir='data/processed',
-    train_ratio=0.8,    # 80% 학습
-    val_ratio=0.1,      # 10% 검증
-    test_ratio=0.1      # 10% 테스트
-)
-```
-
----
-
-## 📊 데이터셋 구조 (AI Hub)
-
-### JSON 구조
-```json
-{
-  "Raw data Info.": {
-    "raw_data_ID": "L-211227_G19_I_UC-11_008",
-    "situation_description": "...",
-    "resolution": [1920, 1080]
-  },
-  "Source data Info.": {
-    "source_data_ID": "L-211227_G19_I_UC-11_008_0144",
-    "file_extension": "jpg"
-  },
-  "Learning data info.": {
-    "annotation": [
-      {
-        "class_id": "SO-21",
-        "type": "box",
-        "coord": [x, y, width, height]
-      }
-    ]
-  }
-}
-```
-
-### bbox 형식
-- **좌표계**: `[x, y, width, height]`
-- **x, y**: bbox 좌측 상단 좌표
-- **width, height**: bbox 너비와 높이
-
----
-
-## ⚠️ 주의사항
-
-1. **메모리**: 대용량 데이터셋 처리 시 메모리 부족 주의
-2. **디스크 공간**: 증강 시 원본의 3~5배 용량 필요
-3. **처리 시간**: 전체 데이터셋 전처리에 수 시간 소요 가능
-4. **JSON 구조**: 실제 AI Hub 데이터 다운로드 후 JSON 구조 확인 필요
-
----
-
-## 📝 TODO
-
-- [ ] 실제 AI Hub JSON 구조에 맞게 `parse_annotations()` 수정
-- [ ] 이미지-라벨 매칭 로직 검증
-- [ ] 전처리 결과 시각화 도구 추가
-- [ ] 진행률 표시 개선 (tqdm)
-- [ ] 멀티프로세싱 지원
-
----
-
-## 🐛 문제 해결
-
-### JSON 파일을 찾을 수 없음
-- `INPUT_DIR` 경로가 올바른지 확인
-- JSON 파일이 실제로 존재하는지 확인
-
-### 이미지를 로드할 수 없음
-- 이미지 파일 경로와 JSON의 `file_name` 일치 여부 확인
-- 이미지 파일 손상 여부 확인
-
-### bbox가 이미지 범위를 벗어남
-- JSON의 좌표 형식 확인 (`[x, y, w, h]` vs `[x1, y1, x2, y2]`)
-- 이미지 해상도와 JSON의 해상도 일치 여부 확인
+### Polygon 타입 처리
+- Polygon 좌표는 자동으로 bounding box로 변환됨
+- 최소/최대 x, y 좌표로 bbox 계산

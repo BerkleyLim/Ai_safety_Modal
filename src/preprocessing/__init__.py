@@ -1,17 +1,36 @@
 """
 데이터 전처리 모듈
-물류창고 안전 데이터셋의 JSON 라벨링 데이터를 전처리합니다.
+AI Hub 물류창고 안전 데이터셋을 YOLO 형식으로 변환합니다.
+
+사용법:
+    python -m src.preprocessing.aihub_to_yolo --data-root ./data/ai_hub --output ./data
+
+출력 구조:
+    data/
+    ├── 01_도크설비/logistics_yolo/
+    │   ├── data.yaml
+    │   ├── train/images/, train/labels/
+    │   └── val/images/, val/labels/
+    ├── 02_보관/logistics_yolo/
+    └── ...
 """
 
-from .data_loader import load_json_labels, load_image
-from .data_validator import validate_dataset
-from .data_augmentation import augment_image
-from .pipeline import preprocess_pipeline
+from .aihub_to_yolo import (
+    AIHubToYOLOConverter,
+    CLASS_MAPPING,
+    CLASS_NAMES,
+    CATEGORY_NAMES,
+    convert_bbox_to_yolo,
+    convert_to_yolo_format,
+    parse_json_label,
+)
 
 __all__ = [
-    'load_json_labels',
-    'load_image',
-    'validate_dataset',
-    'augment_image',
-    'preprocess_pipeline'
+    'AIHubToYOLOConverter',
+    'CLASS_MAPPING',
+    'CLASS_NAMES',
+    'CATEGORY_NAMES',
+    'convert_bbox_to_yolo',
+    'convert_to_yolo_format',
+    'parse_json_label',
 ]
