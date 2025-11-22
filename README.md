@@ -82,7 +82,7 @@ src/
 │   └── train_yolo.py      # YOLO 학습
 ├── monitoring/            # 객체 탐지 (YOLO)
 ├── reasoning/             # 위험 분석 (VLM)
-├── action/                # 안전 가이드라인 생성
+├── action/                # 안전 가이드라인 생성 (LLM)
 └── run.py                 # 관제 파이프라인 실행
 ```
 
