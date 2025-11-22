@@ -26,8 +26,11 @@ cd src
 # 카테고리 01~05 전처리 (샘플 500개씩)
 python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05 --sample 500
 
-# 전체 데이터 전처리
-python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05
+# 카테고리 06~11 전처리 (샘플 500개씩)
+python -m preprocessing.aihub_to_yolo --folders 06 07 08 09 10 11 --sample 500
+
+# 전체 카테고리 전처리 (전체 데이터를 말함)
+python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05 06 07 08 09 10 11
 ```
 
 ### 2. 학습 (YOLO 모델)
@@ -35,8 +38,18 @@ python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05
 ```bash
 cd src
 
-# 카테고리 01 학습
-python -m training.train_yolo --category 01 --epochs 100
+# 카테고리별 학습
+python -m training.train_yolo --category 01 --epochs 100  # 도크설비
+python -m training.train_yolo --category 02 --epochs 100  # 보관
+python -m training.train_yolo --category 03 --epochs 100  # 부가가치서비스
+python -m training.train_yolo --category 04 --epochs 100  # 설비및장비
+python -m training.train_yolo --category 05 --epochs 100  # 운반
+python -m training.train_yolo --category 06 --epochs 100  # 입고 (데이터 다운로드 후)
+python -m training.train_yolo --category 07 --epochs 100  # 지게차 (데이터 다운로드 후)
+python -m training.train_yolo --category 08 --epochs 100  # 출고 (데이터 다운로드 후)
+python -m training.train_yolo --category 09 --epochs 100  # 파렛트렉 (데이터 다운로드 후)
+python -m training.train_yolo --category 10 --epochs 100  # 피킹분배 (데이터 다운로드 후)
+python -m training.train_yolo --category 11 --epochs 100  # 화재 (데이터 다운로드 후)
 
 # GPU 지정
 python -m training.train_yolo --category 01 --epochs 100 --device 0
@@ -82,6 +95,59 @@ src/
 | 03 | 부가가치서비스 |
 | 04 | 설비및장비 |
 | 05 | 운반 |
+| 06 | 입고 |
+| 07 | 지게차 |
+| 08 | 출고 |
+| 09 | 파렛트렉 |
+| 10 | 피킹분배 |
+| 11 | 화재 |
+
+## 데이터셋
+
+### 출처
+
+- **AI Hub**: [물류센터 안전장비 및 행동 인식 데이터](https://www.aihub.or.kr/aihubdata/data/view.do?currMenu=115&topMenu=100&aihubDataSe=data&dataSetSn=510)
+
+### 다운로드 후 셋팅
+
+압축 해제된 상태에서 진행합니다.
+
+1. 프로젝트 루트에 `data/ai_hub/` 폴더 생성
+2. 다운로드한 데이터를 아래 구조로 배치:
+
+```
+data/ai_hub/
+├── traning/
+│   ├── original/
+│   │   ├── TS_01_도크설비/
+│   │   ├── TS_02_보관/
+│   │   ├── TS_03_부가가치서비스/
+│   │   ├── TS_04_설비 및 장비/
+│   │   ├── TS_05_운반/
+│   │   ├── TS_06_입고/
+│   │   ├── TS_07_지게차/
+│   │   ├── TS_08_출고/
+│   │   ├── TS_09_파렛트, 렉/
+│   │   ├── TS_10_피킹, 분배/
+│   │   └── TS_11_화재/
+│   └── label/
+│       ├── TL_01_도크설비/
+│       ├── TL_02_보관/
+│       └── ... (TL_03 ~ TL_11)
+└── validation/
+    ├── original/
+    │   ├── VS_01_도크설비/
+    │   └── ... (VS_02 ~ VS_11)
+    └── label/
+        ├── VL_01_도크설비/
+        └── ... (VL_02 ~ VL_11)
+```
+
+3. 전처리 실행:
+```bash
+cd src
+python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05 06 07 08 09 10 11 --sample 500
+```
 
 ## 클래스 (35개)
 
