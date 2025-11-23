@@ -1,0 +1,103 @@
+# src/monitoring/__init__.py
+
+from ultralytics import YOLO
+import torch
+from typing import List
+# ---  Pydantic 스키마 및 타입 힌트 임포트 ---
+from schemas.monitoring_output import MonitoringOutput, DetectedObject
+
+# --- (수정 3 - 향후) 이 경로는 미세조정된 모델로 변경될 것입니다 ---
+# (예시) model = YOLO('runs/train/exp/weights/best.pt')
+# 현재는 테스트를 위해 기본 모델을 유지합니다.
+model = YOLO('yolov8n.pt')
+
+# GPU 사용 가능 여부를 확인하고 모델을 해당 장치로 보냅니다.
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model.to(device)
+print(f"🤖 [Monitoring] YOLOv8 모델을 '{device}' 장치에서 실행합니다.")
+
+# --- (수정 2 - 향후) 미세조정 후 실제 위험 클래스로 변경될 목록 ---
+# (예시) TARGET_HAZARDS = ['UA-01', 'UA-17', 'UC-20']
+# 현재는 'person'으로 테스트를 유지합니다.
+CURRENT_TEST_TARGET = 'potted plant'
+
+
+def detect_objects(image_path: str) -> MonitoringOutput:
+    """
+    [실제 Monitoring Layer 함수]
+    YOLOv8 모델을 사용하여 이미지에서 객체를 탐지하고,
+    미리 정의된 규칙에 따라 '이상 상황' 여부를 판단합니다.
+
+    Args:
+        image_path (str): 분석할 이미지 파일의 경로
+
+    Returns:
+        MonitoringOutput: Pydantic 스키마에 정의된 탐지 결과 객체
+    """
+    print(f"👀 [Monitoring] YOLOv8 모델로 '{image_path}'의 객체 탐지를 시작합니다...")
+
+    # 2. 모델을 사용하여 이미지 추론 실행
+    results = model(image_path)
+
+    detected_objects_list_raw = [] # 딕셔너리를 임시 저장할 리스트
+
+    # 3. 탐지 결과에서 필요한 정보 추출
+    for result in results:
+        boxes = result.boxes
+
+        for i in range(len(boxes)):
+            class_id = int(boxes.cls[i])
+            class_name = model.names[class_id]
+            confidence = float(boxes.conf[i])
+            box = boxes.xyxy[i].cpu().numpy().tolist()
+
+            # Pydantic의 alias='class'에 맞게 딕셔너리 생성
+            detected_objects_list_raw.append({
+                "class": class_name,
+                "confidence": confidence,
+                "box": box
+            })
+
+    # --- 딕셔너리 리스트를 Pydantic 모델 리스트로 변환 ---
+    pydantic_detected_objects: List[DetectedObject] = []
+    for obj_dict in detected_objects_list_raw:
+        try:
+            # Pydantic 모델로 변환 (자동 유효성 검사)
+            pydantic_detected_objects.append(DetectedObject(**obj_dict))
+        except Exception as e:
+            print(f"🚨 [Monitoring] Pydantic DetectedObject 변환 오류: {e} - 데이터: {obj_dict}")
+
+
+    # 4. 이상 상황 판단 로직 (연구의 핵심 부분)
+    # --- 미세조정 후 이 로직은 TARGET_HAZARDS 목록을 사용하도록 변경되어야 합니다 ---
+    detected_class_names = [obj.class_name for obj in pydantic_detected_objects]
+    print("detected_class_name", detected_class_names)
+
+    # (현재 테스트 로직)
+    if CURRENT_TEST_TARGET in detected_class_names:
+        status = "anomaly_detected"
+        print(f"✅ [Monitoring] '{CURRENT_TEST_TARGET}' 객체 탐지! 이상 상황으로 판단합니다.")
+    else:
+        status = "normal"
+        print("➡️ [Monitoring] 특이사항 없음. 파이프라인을 종료합니다.")
+
+    # (미세조정 후 로직 예시)
+    # is_anomaly = any(cls in TARGET_HAZARDS for cls in detected_class_names)
+    # status = "anomaly_detected" if is_anomaly else "normal"
+    # if is_anomaly:
+    #     print("✅ [Monitoring] 위험 이벤트 감지! 이상 상황으로 판단합니다.")
+    # else:
+    #     print("➡️ [Monitoring] 특이사항 없음. 파이프라인을 종료합니다.")
+    # ---------------------------------------------------
+
+    try:
+        output = MonitoringOutput(
+            status=status,
+            image_path=image_path,
+            detected_objects=pydantic_detected_objects
+        )
+        return output
+    except Exception as e:
+        print(f"🚨 [Monitoring] Pydantic MonitoringOutput 변환 오류: {e}")
+        # 오류 발생 시에도 스키마에 맞는 객체 반환 (오류 상태 명시)
+        return MonitoringOutput(status="error_parsing_output", image_path=image_path, detected_objects=[])
