@@ -17,10 +17,15 @@ def main_pipeline(image_path):
     from monitoring import detect_objects
     from reasoning import analyze_risk_with_vlm
     from action import generate_safety_guideline
+    from schemas.monitoring_output import MonitoringOutput
 
     print("\n====== 전체 안전 관제 파이프라인 시작 ======")
-    detection_result = detect_objects(image_path)
-    if detection_result and detection_result["status"] == "anomaly_detected":
+    detection_result_dict = detect_objects(image_path)
+
+    if detection_result_dict and detection_result_dict["status"] == "anomaly_detected":
+        # dict → Pydantic MonitoringOutput 변환
+        detection_result = MonitoringOutput.model_validate(detection_result_dict)
+
         analysis_result = analyze_risk_with_vlm(detection_result)
         if analysis_result:
             generate_safety_guideline(analysis_result)

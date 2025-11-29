@@ -66,11 +66,45 @@ python -m training.train_yolo --help
 cd src
 
 # 전처리된 이미지로 테스트
-python run.py --image ../data/01_도크설비/logistics_yolo/val/images/image_000001.jpg
+python run.py --image ../data/06_입고/logistics_yolo/val/images/image_000001.jpg
 
 # 이미지 자동 선택 (전처리된 val 이미지 중 하나)
 python run.py
 ```
+
+### 4. 평가 및 검증
+
+```bash
+cd src
+
+# 전체 리포트 생성 (성능 지표 + 적합성 검증 + 시각화)
+python -m evaluation.generate_report
+
+# 성능 지표만 출력
+python -m evaluation.generate_report --action metrics
+
+# 적합성 검증만 실행
+python -m evaluation.generate_report --action validate
+
+# 시각화만 생성
+python -m evaluation.generate_report --action visualize
+
+# 특정 모델 지정
+python -m evaluation.generate_report --model ../models/safety_06_입고_20251129_134939
+```
+
+**평가 모듈 설명:**
+- `evaluation.metrics`: YOLO 학습 결과(mAP50, Precision, Recall 등) 추출 및 출력
+- `evaluation.validation`: 모델 및 프레임워크 적합성 검증 (6개 항목)
+- `evaluation.visualize`: 학습 곡선 및 성능 대시보드 시각화
+
+**적합성 검증 항목:**
+1. YOLO 모델 파일 존재 여부
+2. YOLO 모델 성능 기준 (mAP50 >= 0.5)
+3. 이상 탐지 클래스 정의 (ANOMALY_CLASSES)
+4. 3-Layer 파이프라인 구조 (Monitoring → Reasoning → Action)
+5. Pydantic 스키마 정의
+6. YOLO 추론 속도 (1초 이내)
 
 ## 프로젝트 구조
 
@@ -83,6 +117,11 @@ src/
 ├── monitoring/            # 객체 탐지 (YOLO)
 ├── reasoning/             # 위험 분석 (VLM)
 ├── action/                # 안전 가이드라인 생성 (LLM)
+├── evaluation/            # 평가 및 검증 모듈
+│   ├── metrics.py         # 성능 지표 추출
+│   ├── validation.py      # 적합성 검증
+│   └── visualize.py       # 시각화
+├── schemas/               # Pydantic 스키마
 └── run.py                 # 관제 파이프라인 실행
 ```
 

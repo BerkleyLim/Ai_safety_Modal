@@ -215,3 +215,42 @@ models/ 폴더에서 best.pt 검색
 | 데이터 검증 | Pydantic |
 | 학습 데이터 | AI Hub 물류센터 안전 데이터 |
 | 프레임워크 | Python 3.10+ |
+
+---
+
+## 4. Evaluation Layer (평가 및 검증)
+
+### 역할
+- YOLO 모델 성능 지표 추출 및 분석
+- 프레임워크 적합성 검증
+- 학습 결과 시각화
+
+### 모듈 구성
+```
+src/evaluation/
+├── metrics.py         # 성능 지표 추출
+├── validation.py      # 적합성 검증
+├── visualize.py       # 시각화
+└── generate_report.py # 통합 리포트 CLI
+```
+
+### 성능 지표 (`metrics.py`)
+| 지표 | 설명 |
+|------|------|
+| mAP50 | IoU 0.5 기준 평균 정밀도 |
+| mAP50-95 | IoU 0.5~0.95 기준 평균 정밀도 |
+| Precision | 정밀도 |
+| Recall | 재현율 |
+
+### 적합성 검증 항목 (`validation.py`)
+1. YOLO 모델 파일 존재 여부
+2. YOLO 모델 성능 기준 (mAP50 >= 0.5)
+3. 이상 탐지 클래스 정의 (ANOMALY_CLASSES)
+4. 3-Layer 파이프라인 구조
+5. Pydantic 스키마 정의
+6. YOLO 추론 속도 (1초 이내)
+
+### 시각화 (`visualize.py`)
+- 학습 손실 곡선 (Box Loss, Cls Loss)
+- 성능 지표 변화 (mAP, Precision, Recall)
+- 종합 대시보드 (`training_dashboard.png`)
