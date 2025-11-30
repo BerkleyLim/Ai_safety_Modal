@@ -6,11 +6,25 @@ import glob
 import random
 from pathlib import Path
 from dotenv import load_dotenv
-
+from datetime import datetime
 # --- 모듈 임포트 ---
 from monitoring import detect_objects
 from reasoning import analyze_risk_with_vlm
 from action import generate_safety_guideline
+
+# 1. 로그 저장용 클래스 정의 (화면 + 파일 동시 출력)
+class DualLogger:
+    def __init__(self, filepath):
+        self.terminal = sys.stdout
+        self.log = open(filepath, "a", encoding='utf-8')
+
+    def write(self, message):
+        self.terminal.write(message) # 화면에 출력
+        self.log.write(message)      # 파일에 저장
+
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
 
 # 1. 환경 변수 로드
 load_dotenv()
@@ -47,6 +61,20 @@ def main_pipeline(image_path):
 
 
 if __name__ == "__main__":
+# 로그 폴더 생성
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # 파일명 생성 (예: logs/run_20251129_123000.txt)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = os.path.join(log_dir, f"run_{timestamp}.txt")
+    
+    # [핵심] 표준 출력(stdout)을 DualLogger로 교체
+    # 이제부터 모든 파일의 print()는 이 클래스를 통과합니다.
+    sys.stdout = DualLogger(log_path)
+    
+    print(f"📝 로그가 저장됩니다: {log_path}")
+
     import argparse
 
     parser = argparse.ArgumentParser(description='물류창고 안전 관제 시스템 실행')
