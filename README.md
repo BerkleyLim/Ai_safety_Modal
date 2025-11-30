@@ -69,7 +69,7 @@ cd src
 python run.py --image ../data/06_입고/logistics_yolo/val/images/image_000001.jpg
 
 # 이미지 자동 선택 (전처리된 val 이미지 중 하나)
-python run.py
+python run.py --data-root "/Volumes/Elements/data" #data-root 지정하지 않은 경우, 기존 설정된 경로로 수행
 ```
 
 ### 4. 평가 및 검증
@@ -94,11 +94,13 @@ python -m evaluation.generate_report --model ../models/safety_06_입고_20251129
 ```
 
 **평가 모듈 설명:**
+
 - `evaluation.metrics`: YOLO 학습 결과(mAP50, Precision, Recall 등) 추출 및 출력
 - `evaluation.validation`: 모델 및 프레임워크 적합성 검증 (6개 항목)
 - `evaluation.visualize`: 학습 곡선 및 성능 대시보드 시각화
 
 **적합성 검증 항목:**
+
 1. YOLO 모델 파일 존재 여부
 2. YOLO 모델 성능 기준 (mAP50 >= 0.5)
 3. 이상 탐지 클래스 정의 (ANOMALY_CLASSES)
@@ -127,19 +129,19 @@ src/
 
 ## 카테고리
 
-| 번호 | 이름 |
-|------|------|
-| 01 | 도크설비 |
-| 02 | 보관 |
-| 03 | 부가가치서비스 |
-| 04 | 설비및장비 |
-| 05 | 운반 |
-| 06 | 입고 |
-| 07 | 지게차 |
-| 08 | 출고 |
-| 09 | 파렛트렉 |
-| 10 | 피킹분배 |
-| 11 | 화재 |
+| 번호 | 이름           |
+| ---- | -------------- |
+| 01   | 도크설비       |
+| 02   | 보관           |
+| 03   | 부가가치서비스 |
+| 04   | 설비및장비     |
+| 05   | 운반           |
+| 06   | 입고           |
+| 07   | 지게차         |
+| 08   | 출고           |
+| 09   | 파렛트렉       |
+| 10   | 피킹분배       |
+| 11   | 화재           |
 
 ## 데이터셋
 
@@ -183,6 +185,7 @@ data/ai_hub/
 ```
 
 3. 전처리 실행:
+
 ```bash
 cd src
 python -m preprocessing.aihub_to_yolo --folders 01 02 03 04 05 06 07 08 09 10 11 --sample 500
