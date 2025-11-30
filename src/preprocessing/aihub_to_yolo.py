@@ -3,7 +3,7 @@ AI Hub 물류센터 안전 데이터셋 -> YOLO 형식 변환 스크립트
 
 AI Hub 데이터 구조:
 data/ai_hub/
-├── traning/
+├── training/
 │   ├── original/
 │   │   └── TS_01_도크설비/
 │   │       ├── 불안전한 상태(UC)/
@@ -399,8 +399,8 @@ class AIHubToYOLOConverter:
         JSON 라벨에 대응하는 이미지 파일 경로 찾기
 
         AI Hub 구조:
-        - label: data/ai_hub/traning/label/TL_01_도크설비/불안전한 상태(UC)/xxx.json
-        - image: data/ai_hub/traning/original/TS_01_도크설비/불안전한 상태(UC)/xxx.jpg
+        - label: data/ai_hub/training/label/TL_01_도크설비/불안전한 상태(UC)/xxx.json
+        - image: data/ai_hub/training/original/TS_01_도크설비/불안전한 상태(UC)/xxx.jpg
         """
         json_str = str(json_path)
 
@@ -497,7 +497,7 @@ class AIHubToYOLOConverter:
         특정 카테고리의 JSON 파일 목록 수집
 
         Args:
-            split_type: 'traning' 또는 'validation'
+            split_type: 'training' 또는 'validation'
             folder_num: 폴더 번호 (01, 02, ...)
 
         Returns:
@@ -510,7 +510,7 @@ class AIHubToYOLOConverter:
             return json_files
 
         # 해당 번호로 시작하는 폴더 찾기
-        prefix = f"TL_{folder_num}" if split_type == 'traning' else f"VL_{folder_num}"
+        prefix = f"TL_{folder_num}" if split_type == 'training' else f"VL_{folder_num}"
 
         for folder in label_base.iterdir():
             if not folder.is_dir():
@@ -561,7 +561,7 @@ class AIHubToYOLOConverter:
 
         # Training 데이터 처리
         print(f"\n[Train] 데이터 수집 중...")
-        train_files = self.collect_category_files('traning', folder_num)
+        train_files = self.collect_category_files('training', folder_num)
         print(f"  수집된 JSON: {len(train_files)}개")
 
         if self.sample_size and len(train_files) > self.sample_size:

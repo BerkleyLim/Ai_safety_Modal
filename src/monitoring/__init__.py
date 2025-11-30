@@ -3,11 +3,23 @@
 from ultralytics import YOLO
 import torch
 from pathlib import Path
+from typing import List
+import sys
+import os
 
-# 프로젝트 경로
-PROJECT_ROOT = Path(__file__).parent.parent.parent
-MODELS_DIR = PROJECT_ROOT / "models"
+# 프로젝트 루트 경로 설정 (import 문제 방지)
+current_file = Path(__file__).resolve()
+project_root = current_file.parent.parent.parent
+sys.path.append(str(project_root))
 
+# --- [중요] Pydantic 스키마 임포트 ---
+try:
+    from src.schemas.monitoring_output import MonitoringOutput, DetectedObject
+except ImportError:
+    # 실행 위치에 따라 경로가 다를 경우 대비
+    from schemas.monitoring_output import MonitoringOutput, DetectedObject
+
+MODELS_DIR = project_root / "models"
 
 def _find_best_model():
     """models/ 폴더에서 가장 최근 학습된 best.pt 찾기"""
@@ -32,13 +44,16 @@ else:
     model = YOLO('yolov8n.pt')
     print("🤖 [Monitoring] 기본 YOLOv8 모델 로드 (yolov8n.pt)")
 
-# GPU 사용 가능 여부를 확인하고 모델을 해당 장치로 보냅니다.
+# GPU 설정
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+if device == 'cpu' and torch.backends.mps.is_available():
+    device = 'mps' 
+
 model.to(device)
 print(f"🤖 [Monitoring] YOLOv8 모델을 '{device}' 장치에서 실행합니다.")
 
 # 위험 클래스 정의 (커스텀 모델용) - 57개 클래스 중 UA/UC 클래스
-# AI Hub 공식 정의 기준
+# # AI Hub 공식 정의 기준
 ANOMALY_CLASSES = [
     # Unsafe Action (UA) - 위험 행동 13개
     "forklift_blind_spot",       # UA-01: 지게차 시야 미확보
@@ -70,10 +85,13 @@ ANOMALY_CLASSES = [
     "cargo_in_fire_escape",      # UC-20: 화재대피로 적재물
     "truck_dock_separated",      # UC-21: 도크-트럭 분리
     "forklift_outside_path",     # UC-22: 지게차 영역 이탈
+    # --- SO (위험 관련 객체 추가) ---
+    "floor_contaminant",  # 바닥 이물질 (방금 로그에 뜬 것)
+    "flammable_material", # 가연물
+    "smoking"             # 흡연
 ]
 
-
-def detect_objects(image_path):
+def detect_objects(image_path: str) -> MonitoringOutput:
     """
     [실제 Monitoring Layer 함수]
     YOLOv8 모델을 사용하여 이미지에서 객체를 탐지하고,
@@ -87,59 +105,48 @@ def detect_objects(image_path):
     """
     print(f"👀 [Monitoring] YOLOv8 모델로 '{image_path}'의 객체 탐지를 시작합니다...")
 
-    # 2. 모델을 사용하여 이미지 추론 실행
+   # 2. 모델을 사용하여 이미지 추론 실행
     results = model(image_path)
 
-    detected_objects_list = []
-
-    # 3. 탐지 결과에서 필요한 정보 추출
+    # --- Pydantic 객체 리스트 생성 ---
+    pydantic_detected_objects: List[DetectedObject] = []
+    
     for result in results:
         boxes = result.boxes
-
         for i in range(len(boxes)):
             class_id = int(boxes.cls[i])
             class_name = model.names[class_id]
             confidence = float(boxes.conf[i])
             box = boxes.xyxy[i].cpu().numpy().tolist()
-
-            detected_objects_list.append({
-                "class": class_name,
-                "confidence": confidence,
-                "box": box
-            })
+            
+            # DetectedObject 객체 생성 및 추가
+            pydantic_detected_objects.append(
+                DetectedObject(
+                    class_name=class_name, # alias='class'
+                    confidence=confidence,
+                    box=box
+                )
+            )
 
     # 4. 이상 상황 판단 로직
-    # ---------------------------------------------------
-    detected_class_names = [obj['class'] for obj in detected_objects_list]
-    print("detected_class_names:", detected_class_names)
-
-    # 커스텀 모델: 위험 클래스가 탐지되면 이상 상황
-    # 기본 모델: person이 탐지되면 이상 상황
-    anomaly_detected = False
-
-    if custom_model_path:
-        # 커스텀 모델 - 위험 클래스 체크
-        for class_name in detected_class_names:
-            if class_name in ANOMALY_CLASSES:
-                anomaly_detected = True
-                print(f"⚠️ [Monitoring] 위험 상황 탐지: {class_name}")
-                break
-    else:
-        # 기본 모델 - person 체크 (기존 로직)
-        if 'person' in detected_class_names:
-            anomaly_detected = True
-
-    if anomaly_detected:
+    detected_class_names = [obj.class_name for obj in pydantic_detected_objects]
+    print(f"detected_class_names: {detected_class_names}")
+    
+    # 탐지된 클래스 중 하나라도 위험 목록에 있으면 True
+    is_anomaly = any(cls in ANOMALY_CLASSES for cls in detected_class_names)
+    
+    if is_anomaly:
         status = "anomaly_detected"
-        print("✅ [Monitoring] 이상 상황으로 판단합니다.")
+        # 감지된 위험 요소 출력
+        dangers = [cls for cls in detected_class_names if cls in ANOMALY_CLASSES]
+        print(f"✅ [Monitoring] 위험 감지됨! ({', '.join(dangers)}) -> Reasoning Layer 호출")
     else:
         status = "normal"
         print("➡️ [Monitoring] 특이사항 없음. 파이프라인을 종료합니다.")
-    # ---------------------------------------------------
 
-    # 최종 결과를 딕셔너리 형태로 정리하여 반환
-    return {
-        "status": status,
-        "image_path": image_path,
-        "detected_objects": detected_objects_list
-    }
+    # --- 최종 결과를 MonitoringOutput 객체로 반환 ---
+    return MonitoringOutput(
+        status=status,
+        image_path=str(image_path),
+        detected_objects=pydantic_detected_objects
+    )
