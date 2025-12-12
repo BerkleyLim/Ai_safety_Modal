@@ -107,7 +107,7 @@ def detect_objects(image_path: str) -> MonitoringOutput:
 
    # 2. 모델을 사용하여 이미지 추론 실행
     results = model(image_path)
-
+    results = model(image_path, conf=0.15)
     # --- Pydantic 객체 리스트 생성 ---
     pydantic_detected_objects: List[DetectedObject] = []
     

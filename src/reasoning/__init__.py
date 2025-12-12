@@ -60,7 +60,7 @@ def analyze_risk_with_vlm(detection_result: MonitoringOutput) -> Optional[Reason
     detected_events_str = "탐지된 이벤트 없음"
     if detection_result.detected_objects:
         # (예시) 신뢰도 0.5 이상인 것들만 클래스 이름 목록으로 만듦
-        high_conf_events = [obj.class_name for obj in detection_result.detected_objects if obj.confidence > 0.5]
+        high_conf_events = [obj.class_name for obj in detection_result.detected_objects if obj.confidence > 0.2]
         if high_conf_events:
             detected_events_str = ", ".join(high_conf_events)
     

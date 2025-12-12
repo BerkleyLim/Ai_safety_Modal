@@ -35,6 +35,7 @@ data/
 └── ...
 """
 
+import csv
 import json
 import os
 import shutil
@@ -482,6 +483,23 @@ class AIHubToYOLOConverter:
         output_label_path = output_dir / split / 'labels' / f"{safe_filename}.txt"
         with open(output_label_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(yolo_lines))
+
+        # ---------------------------------------------------------
+        # [추가 2] 원본 파일명 매핑 로그 저장 (족보 만들기)
+        # ---------------------------------------------------------
+        mapping_csv_path = self.output_base / "filename_mapping.csv"
+        
+        # 파일이 없으면 헤더(Header) 작성
+        file_exists = mapping_csv_path.exists()
+        
+        with open(mapping_csv_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["New_Filename", "Original_Path"])  # 헤더
+            
+            # 족보 한 줄 추가: (새 이름, 원본 절대 경로)
+            writer.writerow([f"{safe_filename}.jpg", str(image_path)])
+        # ---------------------------------------------------------
 
         # 클래스 통계 업데이트
         for ann in annotations:
