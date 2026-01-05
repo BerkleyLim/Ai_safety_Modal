@@ -4,9 +4,13 @@ from pydantic import BaseModel, Field
 
 class DetectedObject(BaseModel):
     """YOLO가 탐지한 단일 객체 정보"""
-    class_name: str = Field(..., alias='class', description="탐지된 객체/이벤트 클래스 이름") #fire, human_accident
+    class_name: str = Field(..., alias='class', description="탐지된 객체/이벤트 클래스 이름") 
     confidence: float = Field(..., ge=0.0, le=1.0, description="탐지 신뢰도 (0~1)")
     box: List[float] = Field(..., min_length=4, max_length=4, description="바운딩 박스 좌표 [x_min, y_min, x_max, y_max]")
+
+    # [추가] 이 설정이 있어야 'class_name'으로 값을 넣을 수 있습니다.
+    class Config:
+        populate_by_name = True 
 
 class MonitoringOutput(BaseModel):
     """Monitoring Layer의 최종 출력 스키마"""

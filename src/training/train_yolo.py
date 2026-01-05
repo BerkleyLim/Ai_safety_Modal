@@ -4,13 +4,24 @@ YOLOv8 학습 스크립트
 
 사용법:
     # 단일 카테고리 학습
+    #1.기존 데이터 경로
     python -m src.training.train_yolo --category 01
+    #2.데이터 경로가 다를 경우
+    python src/training/train_yolo.py --category 05 --data-root "/Volumes/Elements/data" --epochs 100
 
     # 전체 카테고리 통합 학습
-    python -m src.training.train_yolo --category all
+    python -m src.training.train_yolo --category all --data-root "/Volumes/Elements/data"
 
     # 커스텀 설정
-    python -m src.training.train_yolo --category 01 --epochs 100 --batch 16 --imgsz 640
+   python -m src.training.train_yolo --category 01 --epochs 100 --batch 16 --imgsz 640
+   
+   python src/training/train_yolo.py \
+  --category 05 \
+  --data-root "/Volumes/Elements/data" \
+  --epochs 100 \
+  --batch 16 \
+  --device mps \
+  --model yolov8n.pt
 """
 
 import os
@@ -27,13 +38,12 @@ except ImportError:
     print("설치: pip install ultralytics")
     sys.exit(1)
 
-
 # 프로젝트 경로
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-DATA_ROOT = PROJECT_ROOT / "data"
+DEFAULT_DATA_ROOT = PROJECT_ROOT / "data"
 MODELS_DIR = PROJECT_ROOT / "models"
 
-# 카테고리 정보
+# 카테고리 정보 (폴더명 매핑용)
 CATEGORIES = {
     "01": "도크설비",
     "02": "보관",
@@ -67,21 +77,24 @@ class YOLOTrainer:
             device: 학습 장치 ('auto', 'cpu', '0', '0,1' 등)
         """
         self.model_name = model_name
-        self.data_root = Path(data_root) if data_root else DATA_ROOT
+        self.data_root = Path(data_root) if data_root else DEFAULT_DATA_ROOT
         self.output_dir = Path(output_dir) if output_dir else MODELS_DIR
         self.device = device
-
-        # 출력 디렉토리 생성
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def get_data_yaml_path(self, category: str) -> Optional[Path]:
-        """카테고리별 data.yaml 경로 반환"""
+        """
+        카테고리별 폴더 구조에 맞는 data.yaml 경로 반환
+        예상 경로: [data_root]/05_운반/logistics_yolo/data.yaml
+        """
         if category == "all":
             # 통합 데이터셋용 data.yaml 경로
             return self.data_root / "all_categories" / "logistics_yolo" / "data.yaml"
-
         category_name = CATEGORIES.get(category, category)
-        yaml_path = self.data_root / f"{category}_{category_name}" / "logistics_yolo" / "data.yaml"
+        
+        # 1. 정확한 폴더명 조합 시도 (예: 05_운반)
+        target_folder_name = f"{category}_{category_name}"
+        yaml_path = self.data_root / target_folder_name / "logistics_yolo" / "data.yaml"
 
         if yaml_path.exists():
             return yaml_path
@@ -188,7 +201,7 @@ class YOLOTrainer:
             }
 
         except Exception as e:
-            print(f"\n학습 중 오류 발생: {e}")
+            print(f"\n❌ 학습 중 오류 발생: {e}")
             return {"success": False, "error": str(e)}
 
     def validate(self, weights_path: str, data_yaml: str = None) -> Dict:
@@ -246,6 +259,7 @@ def train_yolo(
     imgsz: int = 640,
     model: str = "yolov8n.pt",
     device: str = "auto",
+    data_root: str = None,  # [수정 1] data_root 인자 추가
     **kwargs
 ) -> Dict:
     """
@@ -258,12 +272,13 @@ def train_yolo(
         imgsz: 이미지 크기
         model: 사전학습 모델
         device: 학습 장치
+        data_root: 데이터 경로
         **kwargs: 추가 파라미터
 
     Returns:
         학습 결과
     """
-    trainer = YOLOTrainer(model_name=model, device=device)
+    trainer = YOLOTrainer(model_name=model,data_root=data_root, device=device)
     return trainer.train(
         category=category,
         epochs=epochs,
@@ -283,64 +298,33 @@ def main():
     parser.add_argument(
         '--category',
         type=str,
-        default='01',
+        default='05',
         help='학습할 카테고리 (01~11 또는 all)'
     )
 
-    # 학습 설정
+    parser.add_argument('--data-root', type=str, default=None, help='데이터 루트 경로')
     parser.add_argument('--epochs', type=int, default=100, help='학습 에포크 수')
     parser.add_argument('--batch', type=int, default=16, help='배치 크기')
     parser.add_argument('--imgsz', type=int, default=640, help='이미지 크기')
     parser.add_argument('--patience', type=int, default=50, help='Early stopping patience')
     parser.add_argument('--workers', type=int, default=8, help='데이터 로더 워커 수')
-
-    # 모델 설정
-    parser.add_argument(
-        '--model',
-        type=str,
-        default='yolov8n.pt',
-        choices=['yolov8n.pt', 'yolov8s.pt', 'yolov8m.pt', 'yolov8l.pt', 'yolov8x.pt'],
-        help='사전학습 모델 선택'
-    )
-
-    # 장치 설정
-    parser.add_argument(
-        '--device',
-        type=str,
-        default='auto',
-        help='학습 장치 (auto, cpu, 0, 0,1 등)'
-    )
-
-    # 기타
+    parser.add_argument('--model', type=str, default='yolov8n.pt', help='모델 종류')
+    parser.add_argument('--device', type=str, default='auto', help='학습 장치 (auto, cpu, 0, 0,1 등)')
     parser.add_argument('--resume', action='store_true', help='이전 학습 재개')
 
     args = parser.parse_args()
 
-    # 카테고리 목록 출력
-    print("\n사용 가능한 카테고리:")
-    for cat_id, cat_name in CATEGORIES.items():
-        print(f"  {cat_id}: {cat_name}")
-    print("  all: 전체 통합")
-
-    # 학습 실행
-    result = train_yolo(
+    trainer = YOLOTrainer(model_name=args.model, data_root=args.data_root, device=args.device)
+    
+    trainer.train(
         category=args.category,
         epochs=args.epochs,
         batch=args.batch,
         imgsz=args.imgsz,
-        model=args.model,
-        device=args.device,
         patience=args.patience,
         workers=args.workers,
         resume=args.resume
     )
-
-    if result["success"]:
-        print("\n학습이 성공적으로 완료되었습니다!")
-        print(f"모델 위치: {result['best_weights']}")
-    else:
-        print(f"\n학습 실패: {result.get('error', 'Unknown error')}")
-
 
 if __name__ == "__main__":
     main()

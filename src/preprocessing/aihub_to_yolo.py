@@ -3,7 +3,7 @@ AI Hub 물류센터 안전 데이터셋 -> YOLO 형식 변환 스크립트
 
 AI Hub 데이터 구조:
 data/ai_hub/
-├── traning/
+├── training/
 │   ├── original/
 │   │   └── TS_01_도크설비/
 │   │       ├── 불안전한 상태(UC)/
@@ -35,6 +35,7 @@ data/
 └── ...
 """
 
+import csv
 import json
 import os
 import shutil
@@ -399,8 +400,8 @@ class AIHubToYOLOConverter:
         JSON 라벨에 대응하는 이미지 파일 경로 찾기
 
         AI Hub 구조:
-        - label: data/ai_hub/traning/label/TL_01_도크설비/불안전한 상태(UC)/xxx.json
-        - image: data/ai_hub/traning/original/TS_01_도크설비/불안전한 상태(UC)/xxx.jpg
+        - label: data/ai_hub/training/label/TL_01_도크설비/불안전한 상태(UC)/xxx.json
+        - image: data/ai_hub/training/original/TS_01_도크설비/불안전한 상태(UC)/xxx.jpg
         """
         json_str = str(json_path)
 
@@ -483,6 +484,23 @@ class AIHubToYOLOConverter:
         with open(output_label_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(yolo_lines))
 
+        # ---------------------------------------------------------
+        # [추가 2] 원본 파일명 매핑 로그 저장 (족보 만들기)
+        # ---------------------------------------------------------
+        mapping_csv_path = self.output_base / "filename_mapping.csv"
+        
+        # 파일이 없으면 헤더(Header) 작성
+        file_exists = mapping_csv_path.exists()
+        
+        with open(mapping_csv_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["New_Filename", "Original_Path"])  # 헤더
+            
+            # 족보 한 줄 추가: (새 이름, 원본 절대 경로)
+            writer.writerow([f"{safe_filename}.jpg", str(image_path)])
+        # ---------------------------------------------------------
+
         # 클래스 통계 업데이트
         for ann in annotations:
             class_id = ann['class_id']
@@ -497,7 +515,7 @@ class AIHubToYOLOConverter:
         특정 카테고리의 JSON 파일 목록 수집
 
         Args:
-            split_type: 'traning' 또는 'validation'
+            split_type: 'training' 또는 'validation'
             folder_num: 폴더 번호 (01, 02, ...)
 
         Returns:
@@ -510,7 +528,7 @@ class AIHubToYOLOConverter:
             return json_files
 
         # 해당 번호로 시작하는 폴더 찾기
-        prefix = f"TL_{folder_num}" if split_type == 'traning' else f"VL_{folder_num}"
+        prefix = f"TL_{folder_num}" if split_type == 'training' else f"VL_{folder_num}"
 
         for folder in label_base.iterdir():
             if not folder.is_dir():
@@ -561,7 +579,7 @@ class AIHubToYOLOConverter:
 
         # Training 데이터 처리
         print(f"\n[Train] 데이터 수집 중...")
-        train_files = self.collect_category_files('traning', folder_num)
+        train_files = self.collect_category_files('training', folder_num)
         print(f"  수집된 JSON: {len(train_files)}개")
 
         if self.sample_size and len(train_files) > self.sample_size:
